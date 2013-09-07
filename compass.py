@@ -7,7 +7,7 @@ class Compass:
 		self.bus = bus
 		self.address = address
 		self.onebyte = onebyte
-		self.maxval = 255 if onebyte else 3599
+		self.maxval = 256 if onebyte else 360.0
 
 	def bearing(self):
 		if self.onebyte:
@@ -16,10 +16,10 @@ class Compass:
 			
 			b1 = self.bus.read_byte_data(self.address,2)
 			b2 = self.bus.read_byte_data(self.address,3)
-			return ( b1 << 8 ) + b2
+			return ((b1<<8)+b2)/10.0
 
 	def zero(self):
-		self.error = self.maxval - self.bearing(self.onebyte)
+		self.error = self.maxval - self.bearing()
 
 	def pitch(self):
 		return ctypes.c_byte(self.bus.read_byte_data(self.address,4)).value
@@ -36,4 +36,4 @@ class Compass:
 		return vals
 
 	def read(self):
-		return self.bearing() + self.error
+		return ( self.bearing() + self.error ) % self.maxval
