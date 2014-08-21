@@ -13,23 +13,24 @@ def FCD( src, filter ):
 
         sobel_x = cv.Sobel( src, cv.CV_32F, 1, 0, ksize = 5 )
         sobel_y = cv.Sobel( src, cv.CV_32F, 0, 1, ksize = 5 )
-        magnitude, angle = cv.cartToPolar(sobel_x,sobel_y,angleInDegrees=True)
-        angle = np.around( angle/A_BUCKET, 0 ) % MAX_A
-	m_angle = np.ma.array( angle, mask = magnitude < filter )
+
+	magnitude = np.hypot( sobel_x, sobel_y )
+
+	gradient = np.degrees( np.arctan2(sobel_y,sobel_x) ) / A_BUCKET
+	m_angle = np.ma.array( gradient.round(0)%MAX_A, mask=magnitude<filter )
 
 	obs = []
 	for i in range(PAIR_PHASE):
-		A = np.transpose( np.nonzero( m_angle == i ) )
-		B = np.transpose( np.nonzero( m_angle == i+PAIR_PHASE ) )
+		A = np.nonzero( m_angle == i ).transpose() 
+		B = np.nonzero( m_angle == i+PAIR_PHASE ).transpose()
 
-		dist = cdist( A, B )
-		ctrs = ( B + A[:,np.newaxis] )/2
-		vects = B - A[:,np.newaxis]
-		agls = np.degrees( np.arctan2(vects[...,1],vects[...,0]) )
-		dirs = np.around( agls/A_BUCKET, 0 ) % MAX_A
+		dts = cdist( A, B )
+		cts = ( B + A[:,np.newaxis] )/2
+		vts = B - A[:,np.newaxis]
+		agls = np.degrees(np.arctan2(vts[...,1],vts[...,0]))/A_BUCKET
 
-		pts = ( dist < max_d ) & ( dirs == i )
-		obs.extend( np.insert( ctrs[pts], 2, dist[pts], axis=1 ) )
+		pts = ( dist < max_d ) & ( ( agls.round(0) % MAX_A ) == i )
+		obs.extend( np.insert( cts[pts], 2, dts[pts]/2, axis=1 ) )
 
 	circles, labels = kmeans2( np.array( obs ), 3, 10, minit='points' )
 
